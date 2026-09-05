@@ -1,0 +1,78 @@
+# ================================================
+# 全国旅游景点信息管理系统 - 配置文件
+# SpringBoot 2.7.18 + JDK17
+# ================================================
+
+# 服务器配置
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# Spring配置
+spring:
+  application:
+    name: tourism-system
+
+  # 静态资源缓存策略: no-cache(协商缓存,每次询问是否有更新)
+  # 目的: 重新构建后浏览器能立即拿到新index.html, 避免旧页面引用已删除的chunk导致路由加载失败
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-cache: true
+
+  # 引入本地私密配置(不入git仓库): 存放API Key等敏感信息, 文件不存在也不报错
+  config:
+    import: optional:application-local.yml
+
+  # 数据源配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/tourism_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: fsy200647
+
+  # 文件上传配置
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+# MyBatis-Plus配置
+mybatis-plus:
+  # XML映射文件位置
+  mapper-locations: classpath*:mapper/**/*.xml
+  # 实体类别名包
+  type-aliases-package: com.tourism.entity
+  # 驼峰下划线自动转换
+  configuration:
+    map-underscore-to-camel-case: true
+    # SQL日志输出(开发阶段开启)
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  # 全局配置
+  global-config:
+    db-config:
+      id-type: auto
+
+# 日志配置
+logging:
+  level:
+    com.tourism.mapper: debug
+    com.tourism.service: info
+    com.tourism.controller: info
+    org.springframework.web: info
+
+# 应用自定义配置
+app:
+  # Token有效期(小时)
+  token-expire-hours: 2
+
+# 大模型配置(智谱GLM-4-Flash, OpenAI兼容协议)
+# 真实API Key放在 application-local.yml(已加入.gitignore, 不会提交到仓库)
+# 获取方式: https://open.bigmodel.cn 注册后在"API Keys"中创建(免费)
+ai:
+  api-key: 在这里粘贴你的智谱APIKey
+  api-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
+  model: glm-4-flash

@@ -1,0 +1,26 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+.trae/
+.agnes/
+
+# Java backend
+tourism-system-backend/target/
+tourism-system-backend/.mvn/
+tourism-system-backend/mvnw
+tourism-system-backend/mvnw.cmd
+# 本地私密配置(API Key等敏感信息, 不入库)
+tourism-system-backend/src/main/resources/application-local.yml
+
+# Frontend
+tourism-system-frontend/node_modules/
+tourism-system-frontend/dist/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs
+*.log

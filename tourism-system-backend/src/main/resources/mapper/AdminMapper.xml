@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tourism.mapper.AdminMapper">
+    <!-- 管理员Mapper XML -->
+    <!-- BaseMapper已提供基础CRUD，自定义SQL后续补充 -->
+</mapper>

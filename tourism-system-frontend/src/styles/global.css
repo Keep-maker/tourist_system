@@ -1,0 +1,109 @@
+/* ============================================================
+ * 全局样式美化: 统一卡片/表格/按钮的圆角与阴影
+ * 参考主流后台模板(Art-Design-Pro / Soybean Admin)风格
+ * ============================================================ */
+
+/* ===== 卡片统一圆角阴影 ===== */
+.el-card {
+  border-radius: 10px !important;
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  transition: box-shadow 0.3s;
+}
+.el-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04) !important;
+}
+.el-card__header {
+  border-bottom: 1px solid #f0f0f0 !important;
+  padding: 16px 20px !important;
+  font-weight: 600;
+  color: #303133;
+}
+.el-card__body {
+  padding: 20px !important;
+}
+
+/* ===== 表格美化 ===== */
+.el-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+.el-table th.el-table__cell {
+  background-color: #fafbfc !important;
+  color: #303133 !important;
+  font-weight: 600;
+}
+/* 表格行悬浮 */
+.el-table__row:hover > td {
+  background-color: #f0f7ff !important;
+}
+
+/* ===== 搜索栏统一间距 ===== */
+.search-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+/* ===== 分页器右对齐 ===== */
+.pagination-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* ===== 按钮微调 ===== */
+.el-button--primary {
+  box-shadow: 0 2px 6px rgba(64, 158, 255, 0.2);
+}
+
+/* ===== 弹窗圆角 ===== */
+.el-dialog {
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+.el-dialog__header {
+  border-bottom: 1px solid #f0f0f0;
+  margin-right: 0 !important;
+  padding: 16px 20px !important;
+}
+.el-dialog__body {
+  padding: 20px !important;
+}
+.el-dialog__footer {
+  border-top: 1px solid #f0f0f0;
+  padding: 12px 20px !important;
+}
+
+/* ===== 标签圆角 ===== */
+.el-tag {
+  border-radius: 6px;
+}
+
+/* ===== 滚动条美化 ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #909399;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ===== 页面过渡动画 ===== */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
