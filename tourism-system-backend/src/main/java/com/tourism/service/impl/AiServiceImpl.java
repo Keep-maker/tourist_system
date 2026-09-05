@@ -172,10 +172,18 @@ public class AiServiceImpl implements AiService {
      */
     private String buildSystemPrompt() {
         StringBuilder sb = new StringBuilder();
-        sb.append("你是\"全国旅游景点信息管理系统\"的AI旅游助手小旅。");
-        sb.append("请优先依据下面系统内的真实景点数据回答用户问题; 数据之外的可以结合旅游常识补充, 但要提醒仅供参考。");
-        sb.append("回答使用中文, 简洁友好, 适当分点, 不超过300字。\n");
-        sb.append("【系统内热门景点数据(TOP20)】\n");
+        sb.append("你是\"全国旅游景点信息管理系统\"的AI旅游助手小旅，专业、友好、热爱旅行。\n\n");
+        sb.append("【回答规范】\n");
+        sb.append("1. 优先依据下面系统内的真实景点数据回答用户问题；数据之外的可以结合旅游常识补充，但要提醒仅供参考。\n");
+        sb.append("2. 回答必须使用 Markdown 格式：\n");
+        sb.append("   - 标题使用 # / ## / ### 分层；\n");
+        sb.append("   - 列表使用 - 或 1. 2. 3.；\n");
+        sb.append("   - 关键信息使用 **加粗** 强调；\n");
+        sb.append("   - 涉及代码、SQL、配置时，用 ```language ... ``` 包裹；\n");
+        sb.append("   - 表格用 | 绘制；\n");
+        sb.append("   - 重点提示用 > 引用块。\n");
+        sb.append("3. 语言：中文，简洁友好，适当分段，总字数控制在 400 字以内。\n\n");
+        sb.append("【系统内热门景点数据(TOP20，按销量排序)】\n");
 
         // 按销量倒序取20个热门景点, 拼成紧凑表格文本
         LambdaQueryWrapper<ScenicSpot> wrapper = new LambdaQueryWrapper<>();
@@ -185,17 +193,17 @@ public class AiServiceImpl implements AiService {
                 .last("LIMIT 20");
         List<ScenicSpot> spots = scenicSpotMapper.selectList(wrapper);
 
+        sb.append("| 名称 | 类型 | 星级 | 评分 | 门票 | 地址 |\n");
+        sb.append("| --- | --- | --- | --- | --- | --- |\n");
         for (ScenicSpot s : spots) {
-            sb.append("- ").append(s.getSpotName());
-            if (s.getSpotType() != null) sb.append(" | 类型: ").append(s.getSpotType());
-            if (s.getStarLevel() != null) sb.append(" | ").append(s.getStarLevel()).append("星");
-            if (s.getScore() != null) sb.append(" | 评分: ").append(s.getScore());
-            if (s.getTicketPrice() != null) sb.append(" | 门票: ").append(s.getTicketPrice()).append("元");
-            if (s.getAddress() != null) {
-                String addr = s.getAddress();
-                sb.append(" | 地址: ").append(addr.length() > 30 ? addr.substring(0, 30) : addr);
-            }
-            sb.append("\n");
+            sb.append("| ").append(s.getSpotName() != null ? s.getSpotName() : "");
+            sb.append(" | ").append(s.getSpotType() != null ? s.getSpotType() : "");
+            sb.append(" | ").append(s.getStarLevel() != null ? s.getStarLevel() + "★" : "");
+            sb.append(" | ").append(s.getScore() != null ? s.getScore() : "");
+            sb.append(" | ").append(s.getTicketPrice() != null ? s.getTicketPrice() + "元" : "");
+            String addr = s.getAddress() != null ? s.getAddress() : "";
+            sb.append(" | ").append(addr.length() > 20 ? addr.substring(0, 20) + "…" : addr);
+            sb.append("|\n");
         }
         return sb.toString();
     }
