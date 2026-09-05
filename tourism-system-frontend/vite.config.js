@@ -15,7 +15,7 @@ export default defineConfig({
     // 开发阶段代理后端接口
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8081',
         changeOrigin: true
       }
     }
