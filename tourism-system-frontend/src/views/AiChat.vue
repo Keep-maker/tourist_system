@@ -16,7 +16,7 @@
           <el-icon :size="18"><MagicStick /></el-icon>
           <span>AI 旅游助手 · 小旅</span>
         </div>
-        <span class="ai-header-sub">🧠 实时思考 · 数据驱动 · Markdown 渲染</span>
+        <span class="ai-header-sub">🧠 LangGraph Agent · 实时思考 · 数据驱动</span>
       </div>
 
       <!-- 消息区域 -->
@@ -31,17 +31,41 @@
           <div v-if="msg.role === 'user'" class="ai-bubble ai-bubble-text">{{ msg.content }}</div>
           <!-- AI 消息: 思考过程 + 正式回答 -->
           <template v-else>
-            <!-- 思考过程卡片（仅在有思考过程时显示） -->
+            <!-- 思考过程卡片（分阶段展示） -->
             <div v-if="msg.thinking" class="ai-thinking">
               <div class="thinking-header">
                 <el-icon :size="14"><Lightning /></el-icon>
                 <span>思考过程</span>
                 <span v-if="loading && isLastAiMsg(idx)" class="thinking-live">● 实时</span>
               </div>
+              <!-- 分阶段进度条 -->
+              <div class="thinking-stages">
+                <div
+                  v-for="(stage, i) in thinkingStages"
+                  :key="i"
+                  class="stage-item"
+                  :class="{ active: stage.active, done: stage.done }"
+                >
+                  <span class="stage-icon">{{ stage.icon }}</span>
+                  <span class="stage-text">{{ stage.text }}</span>
+                </div>
+              </div>
               <div class="thinking-content ai-bubble-md" v-html="renderMarkdown(msg.thinking)"></div>
             </div>
             <!-- 正式回答 -->
             <div class="ai-bubble ai-bubble-md" v-html="renderMarkdown(msg.content)"></div>
+            <!-- 预测问题 -->
+            <div v-if="msg.predictions && msg.predictions.length" class="ai-predictions">
+              <span class="predict-label">💡 你可能还想问：</span>
+              <span
+                v-for="(pred, i) in msg.predictions"
+                :key="i"
+                class="predict-chip"
+                @click="handleSuggestion(pred)"
+              >
+                {{ pred }}
+              </span>
+            </div>
           </template>
         </div>
         <!-- 生成中的加载动画 -->
@@ -118,6 +142,15 @@ function renderMarkdown(raw) {
   return restoreInlineCode(html)
 }
 
+// ─── 思考阶段配置 ─────────────────────────────────────────────────────────────
+const THINKING_STAGES = [
+  { key: 'init', icon: '🔄', text: '初始化' },
+  { key: 'retrieving', icon: '🔍', text: '检索数据' },
+  { key: 'analyzing', icon: '🧠', text: '分析推理' },
+  { key: 'generating', icon: '✍️', text: '生成回答' },
+  { key: 'predicting', icon: '💡', text: '预测需求' },
+]
+
 // ─── 状态 ────────────────────────────────────────────────────────────────────
 const visible = ref(false)
 const input = ref('')
@@ -125,12 +158,17 @@ const messages = ref([
   {
     role: 'assistant',
     content: '你好，我是AI旅游助手小旅 🧭\n\n我基于系统数据库中的 **678个景点** 和 **225个城市** 数据为你服务。\n\n可以帮你：\n- 🏆 推荐热门景点\n- 📍 规划行程路线\n- 💰 查询门票价格\n- 📊 分析景点数据\n\n直接问我吧！',
-    thinking: null
+    thinking: null,
+    predictions: null
   }
 ])
 const messagesRef = ref(null)
 const loading = ref(false)
 let abortController = null
+
+// 当前消息的思考阶段状态
+const currentStage = ref('init')
+const thinkingStages = ref(THINKING_STAGES.map(s => ({ ...s, active: false, done: false })))
 
 // 面板尺寸响应式
 const panelWidth = ref(420)
@@ -160,6 +198,16 @@ const showTyping = computed(() => {
 function isLastAiMsg(idx) {
   const last = messages.value[messages.value.length - 1]
   return last && last.role === 'assistant' && messages.value[idx] === last
+}
+
+// 更新思考阶段状态
+function updateStage(stageKey) {
+  currentStage.value = stageKey
+  thinkingStages.value = THINKING_STAGES.map(s => ({
+    ...s,
+    active: s.key === stageKey,
+    done: s.key === stageKey || THINKING_STAGES.findIndex(x => x.key === s.key) < THINKING_STAGES.findIndex(x => x.key === stageKey)
+  }))
 }
 
 // 推荐问题池
@@ -211,9 +259,13 @@ function handleSend() {
     .filter((m, i) => i > 0)
     .map((m) => ({ role: m.role, content: m.content, thinking: m.thinking }))
 
-  messages.value.push({ role: 'user', content: text, thinking: null })
+  // 重置思考阶段
+  currentStage.value = 'init'
+  thinkingStages.value = THINKING_STAGES.map(s => ({ ...s, active: false, done: false }))
+
+  messages.value.push({ role: 'user', content: text, thinking: null, predictions: null })
   // AI 占位：先放入空思考和空回答
-  messages.value.push({ role: 'assistant', content: '', thinking: null })
+  messages.value.push({ role: 'assistant', content: '', thinking: null, predictions: null })
   input.value = ''
   loading.value = true
   scrollToBottom()
@@ -222,31 +274,33 @@ function handleSend() {
   abortController = chatWithAIStream({
     message: text,
     history: history.slice(-6),
+    onThinking: (step, content) => {
+      // 更新当前思考阶段
+      updateStage(step)
+      const last = messages.value[messages.value.length - 1]
+      if (last && last.role === 'assistant') {
+        last.thinking = (last.thinking || '') + content + '\n'
+      }
+      scrollToBottom()
+    },
     onChunk: (chunk) => {
       const last = messages.value[messages.value.length - 1]
       if (last && last.role === 'assistant') {
-        // 智能分割：遇到 ### 💭 思考中... 标记时，将内容拆分到 thinking 字段
-        const thinkingMarker = '### 💭 思考中...'
-        const idx = chunk.indexOf(thinkingMarker)
-
-        if (idx === -1) {
-          // 没有思考标记，全部追加到 content
-          last.content += chunk
-        } else {
-          // 有思考标记，分段处理
-          const before = chunk.substring(0, idx)
-          const after = chunk.substring(idx)
-
-          if (before) {
-            last.thinking = (last.thinking || '') + before
-          }
-          if (after.startsWith(thinkingMarker)) {
-            // 切换模式：后续内容写入 content
-            last.content = (last.content || '') + after
-          } else {
-            last.thinking = (last.thinking || '') + after
+        last.content = (last.content || '') + chunk
+      }
+      scrollToBottom()
+    },
+    onPredict: (content) => {
+      try {
+        const predictions = JSON.parse(content)
+        if (Array.isArray(predictions)) {
+          const last = messages.value[messages.value.length - 1]
+          if (last && last.role === 'assistant') {
+            last.predictions = predictions
           }
         }
+      } catch (e) {
+        // 忽略解析错误
       }
       scrollToBottom()
     },
@@ -261,7 +315,9 @@ function handleSend() {
       abortController = null
       scrollToBottom()
     },
-    onDone: () => {
+    onDone: (meta) => {
+      // 标记所有阶段为完成
+      thinkingStages.value = THINKING_STAGES.map(s => ({ ...s, active: false, done: true }))
       loading.value = false
       abortController = null
       refreshFollowUps()
@@ -581,7 +637,7 @@ function handleStop() {
   font-size: 11px;
   font-weight: 600;
   color: #764ba2;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   letter-spacing: 0.3px;
 }
 .thinking-live {
@@ -595,6 +651,46 @@ function handleStop() {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+
+/* 思考阶段进度条 */
+.thinking-stages {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.stage-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: #a0aec0;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: #f0f4f8;
+  transition: all 0.3s ease;
+}
+.stage-item.active {
+  color: #764ba2;
+  background: linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15));
+  font-weight: 600;
+  animation: stage-pulse 1s infinite;
+}
+.stage-item.done {
+  color: #48bb78;
+  background: rgba(72, 187, 120, 0.1);
+}
+@keyframes stage-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+.stage-icon {
+  font-size: 10px;
+}
+.stage-text {
+  font-size: 10px;
+}
+
 .thinking-content {
   background: linear-gradient(135deg, #faf5ff, #f0f4ff);
   border: 1px dashed #b794f4;
@@ -647,6 +743,39 @@ function handleStop() {
   padding: 4px 8px;
   font-size: 11px;
   color: #553c9a;
+}
+
+/* ─── 预测问题 ─── */
+.ai-predictions {
+  max-width: 88%;
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  animation: msg-in 0.3s ease;
+}
+.predict-label {
+  font-size: 11px;
+  color: #a0aec0;
+  font-weight: 500;
+}
+.predict-chip {
+  font-size: 11px;
+  color: #667eea;
+  background: linear-gradient(135deg, rgba(102,126,234,0.08), rgba(118,75,162,0.08));
+  border: 1px solid rgba(102,126,234,0.25);
+  border-radius: 12px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-weight: 500;
+}
+.predict-chip:hover {
+  background: linear-gradient(135deg, rgba(102,126,234,0.18), rgba(118,75,162,0.18));
+  border-color: rgba(102,126,234,0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102,126,234,0.15);
 }
 
 /* 打字中动画 */
